@@ -8,11 +8,10 @@ import TableHead from '@mui/material/TableHead';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
-import { Button } from '@mui/material';
-import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import { useRouter } from 'next/router';
+import { useTable, useSortBy } from 'react-table';
 
-const DataTable = ({ headCells, bodyCells }) => {
+const DataTable = ({ columns, data }) => {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const router = useRouter();
@@ -26,6 +25,17 @@ const DataTable = ({ headCells, bodyCells }) => {
     setPage(0);
   };
 
+  const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
+    useTable(
+      {
+        columns,
+        data,
+      },
+      useSortBy,
+    );
+
+  const emptyTable = columns.length <= 0;
+
   return (
     <Box sx={{ width: '100%' }}>
       <Paper sx={{ width: '100%', mb: 2 }}>
@@ -33,37 +43,54 @@ const DataTable = ({ headCells, bodyCells }) => {
           <Table
             sx={{ minWidth: 750, maxHeight: 800 }}
             aria-labelledby="tableTitle"
+            {...getTableProps()}
           >
             <TableHead>
-              <TableRow>
-                {headCells.map((headCell, i) => (
-                  <TableCell
-                    colSpan={i === headCells.length - 1 ? 2 : 1}
-                    key={headCell}
-                  >
-                    {headCell}
-                  </TableCell>
-                ))}
-              </TableRow>
+              {headerGroups.map((headerGroup) => (
+                <TableRow
+                  key={headerGroup}
+                  {...headerGroup.getHeaderGroupProps()}
+                >
+                  {headerGroup.headers.map((column) => (
+                    <TableCell
+                      key={column.id}
+                      {...column.getHeaderProps(column.getSortByToggleProps())}
+                    >
+                      {column.render('Header')}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
             </TableHead>
-            <TableBody>
-              {bodyCells
+            <TableBody {...getTableBodyProps()}>
+              {emptyTable && (
+                <TableRow>
+                  <TableCell colSpan={columns.length - 1}>
+                    No blogs found, create a new blog 🎉
+                  </TableCell>
+                </TableRow>
+              )}
+              {rows
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((row) => {
+                  prepareRow(row);
+
                   return (
                     <TableRow
                       hover
-                      onClick={() => router.push(row.id)}
+                      onClick={() => router.push(row.original.id)}
                       tabIndex={-1}
                       key={row.title}
+                      {...row.getRowProps()}
                     >
-                      <TableCell>{row.title}</TableCell>
-                      <TableCell>{row.description}</TableCell>
-                      <TableCell>
-                        <Button>
-                          <MoreHorizIcon />
-                        </Button>
-                      </TableCell>
+                      {row.cells.map((cell) => (
+                        <TableCell
+                          key={row.original.id}
+                          {...cell.getCellProps()}
+                        >
+                          {cell.render('Cell')}
+                        </TableCell>
+                      ))}
                     </TableRow>
                   );
                 })}
@@ -73,7 +100,7 @@ const DataTable = ({ headCells, bodyCells }) => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={bodyCells.length}
+          count={columns.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
-import { Grid, Button } from '@mui/material';
+import { Grid, Button, TextField } from '@mui/material';
 import AppBar from 'components/AppBar';
 import DataTable from 'components/DataTable';
-import { getBlogs } from 'mockServer/services';
+import { getBlogs, getBlogsWithFilter } from 'mockServer/services';
 import { useRouter } from 'next/router';
+import SearchIcon from '@mui/icons-material/Search';
 import { v4 as uuidv4 } from 'uuid';
 
 export default function Home() {
@@ -19,6 +20,7 @@ export default function Home() {
         id: blog.id,
         title: blog.title,
         description: blog.description,
+        dateCreated: blog.dateCreated,
       })),
     );
   }, []);
@@ -26,6 +28,38 @@ export default function Home() {
   const handleCreateClick = () => {
     router.push(`/${uuidv4()}`);
   };
+
+  const handleSearch = (searchQueryString) => {
+    const blogs = getBlogsWithFilter(searchQueryString);
+    setTableRows(
+      blogs.map((blog) => ({
+        id: blog.id,
+        title: blog.title,
+        description: blog.description,
+        dateCreated: blog.dateCreated,
+      })),
+    );
+  };
+
+  const [columns, data] = useMemo(() => {
+    return [
+      [
+        {
+          Header: 'Title',
+          accessor: 'title',
+        },
+        {
+          Header: 'Description',
+          accessor: 'description',
+        },
+        {
+          Header: 'Date Created',
+          accessor: 'dateCreated',
+        },
+      ],
+      tableRows,
+    ];
+  }, [tableRows]);
 
   return (
     <>
@@ -39,10 +73,19 @@ export default function Home() {
           <AppBar />
         </Grid>
         <Grid item xs={12} m={2}>
-          <DataTable
-            headCells={['Title', 'Description']}
-            bodyCells={tableRows}
+          <TextField
+            sx={{
+              width: '300px',
+            }}
+            placeholder="Search"
+            InputProps={{
+              endAdornment: <SearchIcon />,
+            }}
+            onChange={(e) => handleSearch(e.target.value)}
           />
+        </Grid>
+        <Grid item xs={12} m={2}>
+          <DataTable columns={columns} data={data} />
         </Grid>
         <Grid item xs={12} mx={2} display="flex" justifyContent="flex-end">
           <Button onClick={handleCreateClick} variant="contained">
